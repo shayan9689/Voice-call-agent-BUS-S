@@ -315,32 +315,38 @@ const usePublic = process.env.VERCEL || !useReactBuild;
 
 if (usePublic) {
   app.get("/", (req, res) => {
-    res.sendFile(path.join(publicDir, "index.html"), (err) => {
-      if (err) res.status(500).send("Frontend not found. Run npm run build.");
+    const indexFile = path.join(publicDir, "index.html");
+    if (!fs.existsSync(indexFile)) {
+      return res.status(500).send("Frontend not found. Run npm run build.");
+    }
+    res.sendFile(indexFile, (err) => {
+      if (err) res.status(500).send("Frontend not found.");
     });
   });
 }
 
-if (process.env.VERCEL) {
-  // Vercel ignores express.static — serve assets and SPA fallback explicitly
+if (process.env.VERCEL && fs.existsSync(publicDir)) {
+  const publicDirResolved = path.resolve(publicDir);
   app.get(/^\/assets\/.+/, (req, res) => {
-    const file = path.join(publicDir, req.path);
-    const resolved = path.normalize(file);
-    if (!resolved.startsWith(path.normalize(publicDir))) return res.status(403).end();
-    res.sendFile(resolved, (err) => {
-      if (err) res.status(404).end();
-    });
+    try {
+      const p = (req.path || req.url || "").replace(/^\//, "").replace(/\?.*$/, "") || "";
+      const resolved = path.resolve(publicDir, p);
+      if (!resolved.startsWith(publicDirResolved)) return res.status(403).end();
+      if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) return res.status(404).end();
+      res.sendFile(resolved, (err) => { if (err) res.status(404).end(); });
+    } catch (_) { res.status(500).end(); }
   });
   app.get("*", (req, res) => {
-    const file = path.join(publicDir, req.path);
-    const resolved = path.normalize(file);
-    if (!resolved.startsWith(path.normalize(publicDir))) return res.status(403).end();
-    if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) {
-      return res.sendFile(resolved);
-    }
-    res.sendFile(path.join(publicDir, "index.html"), (err) => {
-      if (err) res.status(404).send("Not found");
-    });
+    try {
+      const p = (req.path || req.url || "/").replace(/^\//, "").split("?")[0] || "index.html";
+      const resolved = path.resolve(publicDir, p);
+      if (!resolved.startsWith(publicDirResolved)) return res.status(403).end();
+      if (fs.existsSync(resolved) && fs.statSync(resolved).isFile())
+        return res.sendFile(resolved);
+      const indexFile = path.join(publicDir, "index.html");
+      if (fs.existsSync(indexFile)) return res.sendFile(indexFile);
+      res.status(404).send("Not found");
+    } catch (_) { res.status(500).end(); }
   });
 } else {
   if (!usePublic) {
@@ -350,6 +356,12 @@ if (process.env.VERCEL) {
     app.use(express.static(publicDir));
   }
 }
+
+// Catch any uncaught errors so the serverless function doesn't crash
+app.use((err, req, res, next) => {
+  console.error("Uncaught error:", err);
+  res.status(500).json({ error: "Internal server error" });
+});
 
 const PORT = process.env.PORT || 5000;
 
