@@ -4,11 +4,16 @@ const path = require("path");
 const fs = require("fs");
 const express = require("express");
 const cors = require("cors");
-const twilio = require("twilio");
-const OpenAI = require("openai");
-const { getBusDataForAgent } = require("./services/busDataService");
 
-const app = express();
+let app;
+let loadError = null;
+
+try {
+  const twilio = require("twilio");
+  const OpenAI = require("openai");
+  const { getBusDataForAgent } = require("./services/busDataService");
+
+  app = express();
 
 // Allow React dev server (localhost:3000) to call this API when proxy fails
 app.use(cors({ origin: ["http://localhost:3000", "http://127.0.0.1:3000"] }));
@@ -365,10 +370,22 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-// On Vercel, the app is run as a serverless function — do not call listen()
-if (!process.env.VERCEL) {
-  app.listen(PORT, () => {
-    console.log(`Daewoo voice agent server is running on port ${PORT}`);
+  // On Vercel, the app is run as a serverless function — do not call listen()
+  if (!process.env.VERCEL) {
+    app.listen(PORT, () => {
+      console.log(`Daewoo voice agent server is running on port ${PORT}`);
+    });
+  }
+} catch (e) {
+  loadError = e;
+  console.error("Server load error:", e);
+  app = express();
+  app.use(express.json());
+  app.use((req, res) => {
+    res.status(500).json({
+      error: "Server failed to load",
+      message: process.env.VERCEL ? String(loadError?.message || loadError) : undefined,
+    });
   });
 }
 
