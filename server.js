@@ -4,16 +4,11 @@ const path = require("path");
 const fs = require("fs");
 const express = require("express");
 const cors = require("cors");
+const twilio = require("twilio");
+const OpenAI = require("openai");
+const { getBusDataForAgent } = require("./services/busDataService");
 
-let app;
-let loadError = null;
-
-try {
-  const twilio = require("twilio");
-  const OpenAI = require("openai");
-  const { getBusDataForAgent } = require("./services/busDataService");
-
-  app = express();
+const app = express();
 
 // Allow React dev server (localhost:3000) to call this API when proxy fails
 app.use(cors({ origin: ["http://localhost:3000", "http://127.0.0.1:3000"] }));
@@ -312,80 +307,22 @@ app.post("/api/call-decline", async (req, res) => {
 });
 
 // Frontend: serve React build or static HTML (after API routes so /api/* is always handled)
-// On Vercel, express.static() is ignored — we must serve assets with res.sendFile
 const clientDist = path.join(__dirname, "client", "dist");
 const publicDir = path.join(__dirname, "public");
-const useReactBuild = fs.existsSync(clientDist) && !process.env.VERCEL;
-const usePublic = process.env.VERCEL || !useReactBuild;
+const useReactBuild = fs.existsSync(clientDist);
 
-if (usePublic) {
-  app.get("/", (req, res) => {
-    const indexFile = path.join(publicDir, "index.html");
-    if (!fs.existsSync(indexFile)) {
-      return res.status(500).send("Frontend not found. Run npm run build.");
-    }
-    res.sendFile(indexFile, (err) => {
-      if (err) res.status(500).send("Frontend not found.");
-    });
-  });
-}
-
-if (process.env.VERCEL && fs.existsSync(publicDir)) {
-  const publicDirResolved = path.resolve(publicDir);
-  app.get(/^\/assets\/.+/, (req, res) => {
-    try {
-      const p = (req.path || req.url || "").replace(/^\//, "").replace(/\?.*$/, "") || "";
-      const resolved = path.resolve(publicDir, p);
-      if (!resolved.startsWith(publicDirResolved)) return res.status(403).end();
-      if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) return res.status(404).end();
-      res.sendFile(resolved, (err) => { if (err) res.status(404).end(); });
-    } catch (_) { res.status(500).end(); }
-  });
-  app.get("*", (req, res) => {
-    try {
-      const p = (req.path || req.url || "/").replace(/^\//, "").split("?")[0] || "index.html";
-      const resolved = path.resolve(publicDir, p);
-      if (!resolved.startsWith(publicDirResolved)) return res.status(403).end();
-      if (fs.existsSync(resolved) && fs.statSync(resolved).isFile())
-        return res.sendFile(resolved);
-      const indexFile = path.join(publicDir, "index.html");
-      if (fs.existsSync(indexFile)) return res.sendFile(indexFile);
-      res.status(404).send("Not found");
-    } catch (_) { res.status(500).end(); }
-  });
+if (useReactBuild) {
+  app.use(express.static(clientDist));
+  app.get("/", (req, res) => res.sendFile(path.join(clientDist, "index.html")));
 } else {
-  if (!usePublic) {
-    app.use(express.static(clientDist));
-    app.get("/", (req, res) => res.sendFile(path.join(clientDist, "index.html")));
-  } else {
-    app.use(express.static(publicDir));
-  }
+  app.use(express.static(publicDir));
+  app.get("/", (req, res) => res.sendFile(path.join(publicDir, "index.html")));
 }
-
-// Catch any uncaught errors so the serverless function doesn't crash
-app.use((err, req, res, next) => {
-  console.error("Uncaught error:", err);
-  res.status(500).json({ error: "Internal server error" });
-});
 
 const PORT = process.env.PORT || 5000;
-
-  // On Vercel, the app is run as a serverless function — do not call listen()
-  if (!process.env.VERCEL) {
-    app.listen(PORT, () => {
-      console.log(`Daewoo voice agent server is running on port ${PORT}`);
-    });
-  }
-} catch (e) {
-  loadError = e;
-  console.error("Server load error:", e);
-  app = express();
-  app.use(express.json());
-  app.use((req, res) => {
-    res.status(500).json({
-      error: "Server failed to load",
-      message: process.env.VERCEL ? String(loadError?.message || loadError) : undefined,
-    });
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Daewoo voice agent server is running on port ${PORT}`);
   });
 }
 

@@ -140,6 +140,15 @@ npm start              # serves backend + React from port 5000
 
 Then open **http://localhost:5000** (or your `BASE_URL`). Ensure `TWILIO_PHONE_NUMBER` and `BASE_URL` are set in `.env` for dial and for correct TwiML on outbound calls.
 
+**Deploy on Vercel:**
+
+1. Connect the repo to Vercel; use the root as the project directory.
+2. **Build**: Vercel will run `npm run build` (installs client deps, builds React, copies `client/dist` to `public/`). No extra build settings needed if `vercel.json` has `buildCommand: "npm run build"` and `installCommand: "npm install"`.
+3. **Environment variables** (in Vercel project settings): set `OPENAI_API_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`, and `BASE_URL` to your Vercel app URL (e.g. `https://your-app.vercel.app`). Optionally add `OPENAI_MODEL`, `PORT`, and any bookme.pk vars.
+4. **Twilio**: Set the “A call comes in” webhook to `https://YOUR-VERCEL-URL/voice/incoming` (POST).
+
+The frontend uses relative `/api` URLs when `VITE_API_BASE` is unset, so it works on the same domain on Vercel.
+
 ---
 
 ### 6. Running the Server

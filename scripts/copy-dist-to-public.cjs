@@ -1,11 +1,11 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
-const clientDist = path.join(__dirname, '..', 'client', 'dist');
-const publicDir = path.join(__dirname, '..', 'public');
+const clientDist = path.join(__dirname, "..", "client", "dist");
+const publicDir = path.join(__dirname, "..", "public");
 
 if (!fs.existsSync(clientDist)) {
-  console.warn('client/dist not found, skipping copy');
+  console.warn("client/dist not found, skipping copy");
   process.exit(0);
 }
 
@@ -22,4 +22,4 @@ function copyRecursive(src, dest) {
 }
 
 copyRecursive(clientDist, publicDir);
-console.log('Copied client/dist to public for Vercel');
+console.log("Copied client/dist to public");
