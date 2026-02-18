@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daewoo Voice Agent — Calls</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --surface2: #243044;
+      --text: #e6edf3;
+      --text-muted: #8b9cb3;
+      --accent: #22c55e;
+      --accent-dim: #16a34a;
+      --danger: #ef4444;
+      --incoming: #3b82f6;
+      --outgoing: #22c55e;
+      --radius: 12px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "DM Sans", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    .layout {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    header {
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--surface2);
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    h1 .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      50% { opacity: 0.6; }
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-top: 0.35rem;
+    }
+
+    section {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    section h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    section h2 .icon {
+      font-size: 1.25rem;
+    }
+
+    .dial-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: flex-end;
+    }
+
+    .dial-form label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .dial-form input {
+      background: var(--surface2);
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      color: var(--text);
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .dial-form input::placeholder {
+      color: var(--text-muted);
+      opacity: 0.8;
+    }
+
+    .dial-form input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+    }
+
+    .btn {
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0f1419;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-dim);
+    }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background: #2d3d52;
+    }
+
+    .message {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .message.show {
+      display: block;
+    }
+
+    .message.success {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .message.error {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .calls-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .calls-table-wrap {
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid var(--surface2);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 0.75rem 1rem;
+      background: var(--surface2);
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-top: 1px solid var(--surface2);
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .dir-badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .dir-inbound {
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+    }
+
+    .dir-outbound {
+      background: rgba(34, 197, 94, 0.2);
+      color: #86efac;
+    }
+
+    .status {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <header>
+      <h1><span class="dot"></span> Daewoo Voice Agent</h1>
+      <p class="subtitle">Incoming and outgoing calls — AI answers on your Twilio number</p>
+    </header>
+
+    <section aria-labelledby="dial-heading">
+      <h2 id="dial-heading"><span class="icon" aria-hidden="true">📞</span> Place outbound call</h2>
+      <form class="dial-form" id="dial-form">
+        <label for="to-number">
+          Phone number (E.164, e.g. +923001234567)
+          <input type="tel" id="to-number" name="to" placeholder="+923001234567" required />
+        </label>
+        <button type="submit" class="btn btn-primary" id="dial-btn">Call</button>
+      </form>
+      <div class="message" id="dial-message" role="status"></div>
+    </section>
+
+    <section aria-labelledby="calls-heading">
+      <h2 id="calls-heading"><span class="icon" aria-hidden="true">📋</span> Recent calls</h2>
+      <div class="calls-toolbar">
+        <span class="text-muted" style="color: var(--text-muted); font-size: 0.9rem;">Incoming calls are answered by the AI. Outgoing calls connect the callee to the same AI flow.</span>
+        <button type="button" class="btn btn-secondary" id="refresh-calls">Refresh</button>
+      </div>
+      <div class="calls-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Direction</th>
+              <th>From</th>
+              <th>To</th>
+              <th>Status</th>
+              <th>Duration</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody id="calls-tbody">
+            <tr><td colspan="6" class="loading">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const dialForm = document.getElementById("dial-form");
+    const toInput = document.getElementById("to-number");
+    const dialBtn = document.getElementById("dial-btn");
+    const dialMessage = document.getElementById("dial-message");
+    const callsTbody = document.getElementById("calls-tbody");
+    const refreshBtn = document.getElementById("refresh-calls");
+
+    function showDialMessage(text, isError) {
+      dialMessage.textContent = text;
+      dialMessage.className = "message show " + (isError ? "error" : "success");
+    }
+
+    function hideDialMessage() {
+      dialMessage.className = "message";
+    }
+
+    dialForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const to = toInput.value.trim();
+      if (!to) return;
+      dialBtn.disabled = true;
+      hideDialMessage();
+      try {
+        const res = await fetch("/api/call-out", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ to }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          showDialMessage(data.error || "Failed to place call", true);
+          return;
+        }
+        showDialMessage("Call initiated. The other party will hear the Daewoo AI when they answer.", false);
+        toInput.value = "";
+        loadCalls();
+      } catch (err) {
+        showDialMessage("Network error. Is the server running?", true);
+      } finally {
+        dialBtn.disabled = false;
+      }
+    });
+
+    function formatTime(iso) {
+      if (!iso) return "—";
+      const d = new Date(iso);
+      return d.toLocaleString();
+    }
+
+    function formatDuration(seconds) {
+      if (seconds == null) return "—";
+      if (seconds < 60) return `${seconds}s`;
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return s ? `${m}m ${s}s` : `${m}m`;
+    }
+
+    async function loadCalls() {
+      callsTbody.innerHTML = "<tr><td colspan=\"6\" class=\"loading\">Loading…</td></tr>";
+      try {
+        const res = await fetch("/api/calls?limit=30");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          callsTbody.innerHTML = "<tr><td colspan=\"6\" class=\"empty\">" + (data.error || "Failed to load calls") + "</td></tr>";
+          return;
+        }
+        const calls = data.calls || [];
+        if (calls.length === 0) {
+          callsTbody.innerHTML = "<tr><td colspan=\"6\" class=\"empty\">No calls yet. Place an outbound call or wait for incoming calls.</td></tr>";
+          return;
+        }
+        callsTbody.innerHTML = calls.map((c) => {
+          const dir = c.direction === "inbound" ? "Incoming" : "Outgoing";
+          const dirClass = c.direction === "inbound" ? "dir-inbound" : "dir-outbound";
+          return (
+            "<tr>" +
+            "<td><span class=\"dir-badge " + dirClass + "\">" + dir + "</span></td>" +
+            "<td>" + escapeHtml(c.from || "—") + "</td>" +
+            "<td>" + escapeHtml(c.to || "—") + "</td>" +
+            "<td class=\"status\">" + escapeHtml(c.status || "—") + "</td>" +
+            "<td>" + formatDuration(c.duration) + "</td>" +
+            "<td>" + formatTime(c.startTime) + "</td>" +
+            "</tr>"
+          );
+        }).join("");
+      } catch (err) {
+        callsTbody.innerHTML = "<tr><td colspan=\"6\" class=\"empty\">Could not load calls. Is the server running?</td></tr>";
+      }
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement("div");
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    refreshBtn.addEventListener("click", loadCalls);
+    loadCalls();
+  </script>
+</body>
+</html>

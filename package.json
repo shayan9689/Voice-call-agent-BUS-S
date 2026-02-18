@@ -1,0 +1,36 @@
+{
+  "name": "daewoo-voice-agent",
+  "version": "1.0.0",
+  "description": "Production-ready AI voice call agent for Daewoo Express Pakistan using Node.js, Express, Twilio Voice, and OpenAI.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "client:install": "cd client && npm install",
+    "client:dev": "cd client && npm run dev",
+    "client:build": "cd client && npm run build",
+    "build": "npm run client:build",
+    "dev:all": "concurrently \"npm run dev\" \"npm run client:dev\""
+  },
+  "keywords": [
+    "daewoo",
+    "voice",
+    "twilio",
+    "openai",
+    "node",
+    "express"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "*",
+    "express": "*",
+    "openai": "*",
+    "twilio": "*"
+  },
+  "devDependencies": {
+    "concurrently": "*",
+    "nodemon": "*"
+  }
+}
