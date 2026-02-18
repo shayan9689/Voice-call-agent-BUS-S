@@ -307,21 +307,48 @@ app.post("/api/call-decline", async (req, res) => {
 });
 
 // Frontend: serve React build or static HTML (after API routes so /api/* is always handled)
-// On Vercel, React build is copied to public/ during build; express.static is ignored there so we serve from public
+// On Vercel, express.static() is ignored — we must serve assets with res.sendFile
 const clientDist = path.join(__dirname, "client", "dist");
 const publicDir = path.join(__dirname, "public");
 const useReactBuild = fs.existsSync(clientDist) && !process.env.VERCEL;
 const usePublic = process.env.VERCEL || !useReactBuild;
+
 if (usePublic) {
   app.get("/", (req, res) => {
     res.sendFile(path.join(publicDir, "index.html"), (err) => {
-      if (err) res.status(500).send("Frontend not found. Run npm run client:build or add public/index.html.");
+      if (err) res.status(500).send("Frontend not found. Run npm run build.");
     });
   });
-  app.use(express.static(publicDir));
+}
+
+if (process.env.VERCEL) {
+  // Vercel ignores express.static — serve assets and SPA fallback explicitly
+  app.get(/^\/assets\/.+/, (req, res) => {
+    const file = path.join(publicDir, req.path);
+    const resolved = path.normalize(file);
+    if (!resolved.startsWith(path.normalize(publicDir))) return res.status(403).end();
+    res.sendFile(resolved, (err) => {
+      if (err) res.status(404).end();
+    });
+  });
+  app.get("*", (req, res) => {
+    const file = path.join(publicDir, req.path);
+    const resolved = path.normalize(file);
+    if (!resolved.startsWith(path.normalize(publicDir))) return res.status(403).end();
+    if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) {
+      return res.sendFile(resolved);
+    }
+    res.sendFile(path.join(publicDir, "index.html"), (err) => {
+      if (err) res.status(404).send("Not found");
+    });
+  });
 } else {
-  app.use(express.static(clientDist));
-  app.get("/", (req, res) => res.sendFile(path.join(clientDist, "index.html")));
+  if (!usePublic) {
+    app.use(express.static(clientDist));
+    app.get("/", (req, res) => res.sendFile(path.join(clientDist, "index.html")));
+  } else {
+    app.use(express.static(publicDir));
+  }
 }
 
 const PORT = process.env.PORT || 5000;
