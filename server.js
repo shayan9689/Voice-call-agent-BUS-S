@@ -307,27 +307,31 @@ app.post("/api/call-decline", async (req, res) => {
 });
 
 // Frontend: serve React build or static HTML (after API routes so /api/* is always handled)
+// On Vercel, React build is copied to public/ during build; express.static is ignored there so we serve from public
 const clientDist = path.join(__dirname, "client", "dist");
 const publicDir = path.join(__dirname, "public");
-const useReactBuild = fs.existsSync(clientDist);
-if (useReactBuild) {
-  app.use(express.static(clientDist));
-  app.get("/", (req, res) => res.sendFile(path.join(clientDist, "index.html")));
-} else {
+const useReactBuild = fs.existsSync(clientDist) && !process.env.VERCEL;
+const usePublic = process.env.VERCEL || !useReactBuild;
+if (usePublic) {
   app.get("/", (req, res) => {
     res.sendFile(path.join(publicDir, "index.html"), (err) => {
       if (err) res.status(500).send("Frontend not found. Run npm run client:build or add public/index.html.");
     });
   });
   app.use(express.static(publicDir));
+} else {
+  app.use(express.static(clientDist));
+  app.get("/", (req, res) => res.sendFile(path.join(clientDist, "index.html")));
 }
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  // Log to stdout for production log aggregation
-  console.log(`Daewoo voice agent server is running on port ${PORT}`);
-});
+// On Vercel, the app is run as a serverless function — do not call listen()
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Daewoo voice agent server is running on port ${PORT}`);
+  });
+}
 
 module.exports = app;
 
