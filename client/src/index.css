@@ -199,16 +199,51 @@ section h2 .icon {
   margin-bottom: 1rem;
 }
 
+.calls-history-box {
+  border-radius: 8px;
+  border: 1px solid var(--surface2);
+  overflow: hidden;
+}
+
 .calls-table-wrap {
   overflow-x: auto;
   border-radius: 8px;
   border: 1px solid var(--surface2);
 }
 
+.calls-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
+}
+
+.cell-ellipsis {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-time {
+  white-space: nowrap;
+}
+
+.calls-show-more-wrap {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--surface2);
+  background: var(--surface2);
+  text-align: center;
+}
+
+.btn-show-more {
+  width: 100%;
+  max-width: 240px;
 }
 
 th {

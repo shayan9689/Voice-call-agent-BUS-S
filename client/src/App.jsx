@@ -4,6 +4,10 @@ import { useState, useEffect, useCallback } from 'react'
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 const API = `${API_BASE}/api`
 
+const INITIAL_CALLS_VISIBLE = 5
+const SHOW_MORE_STEP = 5
+const CLEAR_HISTORY_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
+
 function formatTime(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleString()
@@ -26,6 +30,7 @@ export default function App() {
   const [dialMessage, setDialMessage] = useState({ text: '', error: false })
   const [incomingCall, setIncomingCall] = useState(null)
   const [incomingActionLoading, setIncomingActionLoading] = useState(false)
+  const [callsVisibleCount, setCallsVisibleCount] = useState(INITIAL_CALLS_VISIBLE)
 
   const loadCalls = useCallback(async () => {
     setCallsLoading(true)
@@ -49,6 +54,15 @@ export default function App() {
 
   useEffect(() => {
     loadCalls()
+  }, [loadCalls])
+
+  // Clear call history every 5 min: reset visible count and refetch
+  useEffect(() => {
+    const t = setInterval(() => {
+      setCallsVisibleCount(INITIAL_CALLS_VISIBLE)
+      loadCalls()
+    }, CLEAR_HISTORY_INTERVAL_MS)
+    return () => clearInterval(t)
   }, [loadCalls])
 
   // Poll for incoming calls when no modal is shown
@@ -228,8 +242,8 @@ export default function App() {
             Refresh
           </button>
         </div>
-        <div className="calls-table-wrap">
-          <table>
+        <div className="calls-history-box">
+          <table className="calls-table">
             <thead>
               <tr>
                 <th>Direction</th>
@@ -264,7 +278,7 @@ export default function App() {
                 </tr>
               )}
               {!callsLoading && !callsError && calls.length > 0 &&
-                calls.map((c) => (
+                calls.slice(0, callsVisibleCount).map((c) => (
                   <tr key={c.sid}>
                     <td>
                       <span
@@ -275,15 +289,26 @@ export default function App() {
                         {c.direction === 'inbound' ? 'Incoming' : 'Outgoing'}
                       </span>
                     </td>
-                    <td>{c.from || '—'}</td>
-                    <td>{c.to || '—'}</td>
-                    <td className="status">{c.status || '—'}</td>
+                    <td className="cell-ellipsis" title={c.from || ''}>{c.from || '—'}</td>
+                    <td className="cell-ellipsis" title={c.to || ''}>{c.to || '—'}</td>
+                    <td className="status cell-ellipsis" title={c.status || ''}>{c.status || '—'}</td>
                     <td>{formatDuration(c.duration)}</td>
-                    <td>{formatTime(c.startTime)}</td>
+                    <td className="cell-time">{formatTime(c.startTime)}</td>
                   </tr>
                 ))}
             </tbody>
           </table>
+          {!callsLoading && !callsError && calls.length > callsVisibleCount && (
+            <div className="calls-show-more-wrap">
+              <button
+                type="button"
+                className="btn btn-secondary btn-show-more"
+                onClick={() => setCallsVisibleCount((n) => Math.min(n + SHOW_MORE_STEP, calls.length))}
+              >
+                Show more ({calls.length - callsVisibleCount} more)
+              </button>
+            </div>
+          )}
         </div>
       </section>
     </div>
